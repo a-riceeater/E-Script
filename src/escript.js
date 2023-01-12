@@ -7,6 +7,7 @@ var eScriptApi = {};
 
 eScriptApi.addRaw = function (injection, useAutoStart) {
     const esaElement = document.createElement("eScriptApiElement");
+    injection = injection.replaceAll("  ", "")
     const lines = injection.split("\n")
     if (useAutoStart || useAutoStart == null) {
         var trueText = "";
@@ -17,8 +18,8 @@ eScriptApi.addRaw = function (injection, useAutoStart) {
                     delete lines[i];
                     continue;
                 }
-                evalulateLine(line);
                 esaElement.innerHTML += "<br>" + line;
+                evalulateLine(line);
             } catch (err) {
                 console.error(err)
             }
@@ -46,7 +47,7 @@ function startEval() {
                     delete lines[i];
                     continue;
                 }
-                evalulateLine(line);
+                evalulateLine(line)
             } catch (err) {
                 alert(err)
             }
@@ -58,27 +59,91 @@ function startEval() {
 }
 
 var currentElement;
+var inStyles;
 function evalulateLine(line) {
-    // features such as get, etc;
-    if (line.includes("get")) {
-        currentElement = document.querySelector(line.remove("get "))
-    } else if (line.includes("break")) {
-        currentElement = null;
-    } else if (line.includes("set innerHTML to ")) {
-        currentElement.innerHTML = line.remove("set innerHTML to ");
-    } else if (line.includes("set innerText to ")) {
-        currentElement.innerText = line.remove("set innerText to ");
-    } else if (line.includes("set document title to")) {
-        document.title = line.remove("set document title to ")
-    } else {
-        try {
-            eval(line)
-        } catch (err) {
-            console.error(err);
+    try {
+        if (inStyles && !line.includes("break")) {
+            evalulateStyles(currentElement, line);
+            return;
         }
+        // features such as get, etc;
+        if (line.includes("get")) {
+            if (line.remove("get ").includes("document.body")) { currentElement = document.body; return; }
+            if (line.remove("get ").includes("document.head")) { currentElement = document.head; return; }
+            if (line.remove("get ").includes("document")) { currentElement = document; return; }
+            currentElement = document.querySelector(line.remove("get "))
+            return true;
+        } else if (line.includes("break")) {
+            currentElement = null;
+            inStyles = null;
+            return true;
+        } else if (line.includes("set innerHTML to ")) {
+            currentElement.innerHTML = line.remove("set innerHTML to ");
+            return true;
+        } else if (line.includes("set innerText to ")) {
+            currentElement.innerText = line.remove("set innerText to ");
+            return true;
+        } else if (line.includes("set document title to")) {
+            document.title = line.remove("set document title to ")
+            return true;
+        } else if (line.includes("alert")) {
+            alert(line.remove("alert "))
+        } else if (line.includes("log")) {
+            console.log(line.remove("log "));
+        } else if (line.includes("warn ")) {
+            console.warn(line.remove("warn "));
+        } else if (line.includes("error")) {
+            console.error(line.remove("error "))
+        } else if (line.includes("prompt ")) {
+            prompt(line.remove("prompt "))
+        } else if (line.includes("confirm ")) {
+            confirm(line.remove("confirm "))
+        } else if (line.includes("set styles")) {
+            inStyles = true;
+        } else if (line.includes("import css url ")) {
+            if (document.body.contains(document.getElementById("#eScriptApiStyles"))) {
+                const styles = document.document.getElementById("#eScriptApiStyles");
+                styles.innerHTML = line.remove("import css url ");
+            } else {
+                const styles = document.createElement("style");
+                styles.innerHTML = line.remove("import css url ");
+                document.head.append(styles);
+            }
+        }
+        else {
+            try {
+                eval(line)
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    } catch (err) {
+        logError(err)
+        return err;
     }
 }
 
 String.prototype.remove = function (query) {
-    return this.replace(query, "")
+    return this.replaceAll(query, "")
+}
+
+function logError(error) {
+    console.error("eScriptAPI Error\n" + error);
+}
+
+function logWarning(warn) {
+    console.warn("eScriptAPI Error\n" + warn);
+}
+
+function evalulateStyles(currentElement, line) {
+    const property = line.split(" ")[0].remove(":")
+    const value = line.split(" ")[1].remove(";")
+
+    try {
+        currentElement.style.setProperty(property, value);
+        return true;
+    } catch (err) {
+        logError(err)
+        return false;
+    }
 }

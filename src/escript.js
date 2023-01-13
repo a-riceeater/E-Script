@@ -101,12 +101,12 @@ function evalulateLine(line) {
         } else if (line.includes("set styles")) {
             inStyles = true;
         } else if (line.includes("import css url ")) {
-            if (document.body.contains(document.getElementById("#eScriptApiStyles"))) {
-                const styles = document.document.getElementById("#eScriptApiStyles");
-                styles.innerHTML = line.remove("import css url ");
+            if (document.head.contains(document.getElementById("#eScriptApiStyles"))) {
+                const styles = document.head.getElementById("#eScriptApiStyles");
+                styles.innerHTML = `@import url("${line.remove("import css url ")}");`
             } else {
                 const styles = document.createElement("style");
-                styles.innerHTML = line.remove("import css url ");
+                styles.innerHTML = `@import url("${line.remove("import css url ")}");`
                 document.head.append(styles);
             }
         }
@@ -137,7 +137,7 @@ function logWarning(warn) {
 
 function evalulateStyles(currentElement, line) {
     const property = line.split(" ")[0].remove(":")
-    const value = line.split(" ")[1].remove(";")
+    const value = line.remove(property).remove(";")
 
     try {
         currentElement.style.setProperty(property, value);
